@@ -92,10 +92,10 @@ MonoBehaviour:
   m_BrainParameters:
     vectorObservationSize: 3
     numStackedVectorObservations: 1
-    vectorActionSize: 0100000001000000
+    vectorActionSize: 02000000
     vectorActionDescriptions: []
     vectorActionSpaceType: 0
-  m_Model: {fileID: 0}
+  m_Model: {fileID: 5022602860645237092, guid: 289b75369b2df384f83437cc9f226ea8, type: 3}
   m_InferenceDevice: 0
   m_BehaviorType: 0
   m_BehaviorName: Basic
@@ -114,7 +114,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   agentParameters:
-    maxStep: 0
+    maxStep: 30
     resetOnDone: 1
     onDemandDecision: 0
     numberOfActionsBetweenDecisions: 1
