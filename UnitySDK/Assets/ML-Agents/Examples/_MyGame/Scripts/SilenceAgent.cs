@@ -52,8 +52,8 @@ public class SilenceAgent : Agent
     [HideInInspector]
     public float[][] history = new float[ActionsMemory][];
 
-    private int[] order = {0,1,2,3}; 
-    private RULES[] rulesSet = {RULES.NONE,RULES.MUST1,RULES.MUST2,RULES.MUSTNOT}; 
+    private int[] order = new int[SilenceManager.ResourcesPerAgent]{0,1,2,3}; 
+    private RULES[] rulesSet = new RULES[SilenceManager.ResourcesPerAgent]{RULES.NONE,RULES.MUST1,RULES.MUST2,RULES.MUSTNOT}; 
     private RULES[] rulesOrder = new RULES[SilenceManager.ResourcesPerAgent];  
     
     public bool IsFirePitValid()

@@ -120,7 +120,7 @@ public class SilenceManager : MonoBehaviour
             FinishGame(id);
     }
 
-    private readonly int[][] firePitMasks =
+    private readonly int[][] firePitMasks = new int[FirePitSize][]
     {
         new []{0,1,2,3,4,5,6},
         new []{1,2,3,4,5,6},

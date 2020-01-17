@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System;
 using System.Linq;
 using UnityEngine;
 using MLAgents;
@@ -6,45 +6,29 @@ using Random = UnityEngine.Random;
 
 public class SilenceAgentSimplified : Agent
 {
-    public const int CollectionSize =
-        SilenceManagerSimplified.RiverSize * SilenceManagerSimplified.ResourcesPerCard
-        + SilenceManagerSimplified.FirePitSize * SilenceManagerSimplified.ResourcesPerCard
-        + /*id*/ SilenceManagerSimplified.AgentsNum
-        + /*rules*/ SilenceManagerSimplified.ResourcesPerAgent * (int)RULES.COUNT; 
+    public const int CollectionSize = StoreSize + BagSize;
+    private static readonly int[] Empty = new int[ItemsTypes]{0,0};
+    private const int ItemsTypes = 2;
+    private const int StoreSize = 1;
+    private const int BagSize = 2;
+    private const int ItemsOrderLimit = 100;
 
-    public static readonly float[] EmptyAction = new float[ActionSize];
-    public const int ActionSize = 2;
-
-    public enum RULES
+    private enum ACTIONS
     {
-        NONE,
-        MUST1,
-        MUSTNOT,
+        BUY,
+        RETURN,
         COUNT
     };
 
-    public enum ACTIONS
-    {
-        RIVER,
-        FIREPIT,
-        FINISH,
-        COUNT
-    };
-
-    [Header("Specific to Silence")] 
     public SilenceAcademySimplified academy;
-    public SilenceManagerSimplified manager;
-    [HideInInspector]
-    public Dictionary<int, Sacrifice> sacrifices = new Dictionary<int, Sacrifice>();
-
-    private int[] order = {0,1,2,3}; 
-    private RULES[] rulesSet = {RULES.NONE,RULES.MUST1,RULES.MUST1,RULES.MUSTNOT}; 
-    private RULES[] rulesOrder = new RULES[SilenceManagerSimplified.ResourcesPerAgent];  
     
-    public bool IsFirePitValid()
-    {
-        return sacrifices.Values.All(s => s.IsValid());
-    }
+    [HideInInspector]
+    public int[][] store = new int[StoreSize][] {Empty};
+    [HideInInspector]
+    public int[][] bag = new int[BagSize][] {Empty,Empty};
+    private int bagItems = 0;
+    private int itemsOrdered = 0;
+    private int badItemsNum = 0;
 
     public override void InitializeAgent()
     {
@@ -53,44 +37,17 @@ public class SilenceAgentSimplified : Agent
 
     public override void CollectObservations()
     {
-        AddVectorObs(manager.river);
-        AddVectorObs(manager.firePit);
-        foreach (var rule in rulesOrder)
-        {
-            AddVectorObs((int)rule, (int)RULES.COUNT);
-        }
-        
-        SetMask();
+        AddVectorObs(store);
+        AddVectorObs(bag);
     }
 
-    /// <summary>
-    /// Applies the mask for the agents action to disallow unnecessary actions.
-    /// </summary>
-    void SetMask()
+    private void AddVectorObs(int[][] items)
     {
-        var firePitMask = manager.GetFirePitMask();
-        if (firePitMask.Count() == SilenceManager.FirePitSize)
-            SetActionMask((int) ACTIONS.FIREPIT);
-        else
-            SetActionMask((int) ACTIONS.FIREPIT, firePitMask);
-    }
-    
-    public void AddVectorObs(int[][] cards)
-    {
-        foreach (var card in cards)
-        foreach (var val in card)
+        foreach (var item in items)
+        foreach (var val in item)
             AddVectorObs(val);
     }
 
-    public void AddVectorObs(float[][] actions)
-    {
-        foreach (var action in actions)
-        {
-            AddVectorObs(Mathf.RoundToInt(action[0]), (int) ACTIONS.COUNT);
-            AddVectorObs(action[1]);
-        }
-    }
-    
     public void Win()
     {
         Done();
@@ -105,122 +62,101 @@ public class SilenceAgentSimplified : Agent
     
     public override void AgentAction(float[] vectorAction)
     {
-        AddReward(-0.0001f);
-
-        if (!IsFirePitValid())
-            AddReward(-0.0001f);
+        if (badItemsNum > 0)
+            AddReward(-0.1f);
         
-        manager.DoAction(vectorAction);
+        var action = (ACTIONS) Mathf.RoundToInt(vectorAction[0]);
+        var index = Mathf.RoundToInt(vectorAction[1]);
+        switch (action)
+        {
+            case ACTIONS.BUY:
+                bag[bagItems] = store[index];
+                store[index] = OrderItem();
+                AddItem(bag[bagItems]);
+                bagItems++;
+                if (bagItems == BagSize)
+                {
+                    FinishGame();
+                    return;
+                }
+                break;
+            case ACTIONS.RETURN:
+                if (bagItems == 0)
+                {
+                    AddReward(-0.1f);
+                    return;
+                }
+
+                RemoveItem(bag[index]);
+                for (var i = index; i < bagItems; i++)
+                    bag[i] = bag[i + 1];
+                bag[bagItems] = Empty;
+                bagItems--;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+
+        if (itemsOrdered > ItemsOrderLimit)
+            FinishGame();
+        
     }
 
     public override void AgentReset()
     {
-        sacrifices.Clear();
-        
-        for (var i = 0; i < order.Length; i++) {
-            var temp = order[i];
-            int randomIndex = Random.Range(i, order.Length);
-            order[i] = order[randomIndex];
-            order[randomIndex] = temp;
-        }
+        badItemsNum = 0;
+        bagItems = 0;
+        itemsOrdered = 0;
 
-        for (var i = 0; i < SilenceManagerSimplified.ResourcesPerAgent; i++)
-        {
-            sacrifices.Add(order[i], new Sacrifice(rulesSet[i]));
-            rulesOrder[order[i]] = rulesSet[i];
-        }
+        for (var i = 0; i < store.Length; i++)
+            store[i] = OrderItem();
+        for (var i = 0; i < bag.Length; i++)
+            bag[i] = Empty;
+    }
+
+    private int[] OrderItem()
+    {
+        itemsOrdered++;
+        var vec = new int[ItemsTypes]{0,0};
+        vec[Random.Range(0, vec.Length)]++; 
+        return vec;
+    }
+
+    private void FinishGame()
+    {
+        PrintState();
+        if (badItemsNum == 0)
+            Win();
+        else
+            Lose();
     }
 
     public override float[] Heuristic()
     {
-        if (Input.GetKey(KeyCode.Q))
-        {
-            return new [] { (float) ACTIONS.RIVER, 0 };
-        }        
-        if (Input.GetKey(KeyCode.W))
-        {
-            return new [] { (float) ACTIONS.RIVER, 1 };
-        }        
-        if (Input.GetKey(KeyCode.E))
-        {
-            return new [] { (float) ACTIONS.RIVER, 2 };
-        }
-        if (Input.GetKey(KeyCode.R))
-        {
-            return new [] {(float) ACTIONS.RIVER, 3};
-        }
-        if (Input.GetKey(KeyCode.Alpha1))
-        {
-            return new [] { (float) ACTIONS.FIREPIT, 0 };
-        }        
-        if (Input.GetKey(KeyCode.Alpha2))
-        {
-            return new [] { (float) ACTIONS.FIREPIT, 1 };
-        }        
-        if (Input.GetKey(KeyCode.Alpha3))
-        {
-            return new [] { (float) ACTIONS.FIREPIT, 2 };
-        }        
-        if (Input.GetKey(KeyCode.Alpha4))
-        {
-            return new [] { (float) ACTIONS.FIREPIT, 3 };
-        }        
-        if (Input.GetKey(KeyCode.Alpha5))
-        {
-            return new [] { (float) ACTIONS.FIREPIT, 4 };
-        }        
-        if (Input.GetKey(KeyCode.Alpha6))
-        {
-            return new [] { (float) ACTIONS.FIREPIT, 5 };
-        }          
-        if (Input.GetKey(KeyCode.Z))
-        {
-            return new [] { (float) ACTIONS.FINISH, 0 };
-        }
-
-        return new [] { (float) ACTIONS.RIVER, 0 };
+        return new float[] { Random.Range(0,(int)ACTIONS.COUNT), 0 };
     }
 
     public override void AgentOnDone()
     {
     }
 
-    public void AddCard(IEnumerable<int> card)
+    private void AddItem(int[] item)
     {
-        foreach (var val in card)
-            if (sacrifices.ContainsKey(val))
-                sacrifices[val].count++;
-    }
-    
-    public void RemoveCard(IEnumerable<int> card)
-    {
-        foreach (var val in card)
-            if (sacrifices.ContainsKey(val))
-                sacrifices[val].count--;
-    }
-    
-    public class Sacrifice
-    {
-        public RULES type;
-        public int count;
-
-        public Sacrifice(RULES type)
-        {
-            this.type = type;
-            count = 0;
-        }
-
-        public bool IsValid()
-        {
-            return type == RULES.NONE ||
-                   type == RULES.MUST1 && count >= 1 ||
-                   type == RULES.MUSTNOT && count == 0;
-        }
+        if (item[0] == 1)
+            badItemsNum++;
     }
 
-    public string PrintState()
+    private void RemoveItem(int[] item)
     {
-        var rules = string.Join(",", rulesOrder.Select(i => i.ToString()).ToArray()); 
-        return ("valid:" + IsFirePitValid() +", rules:[" + rules + "]" );
+        if (item[0] == 1)
+            badItemsNum--;
+    }
+
+    private void PrintState()
+    {
+        var shopState = string.Join(" ", store.Select(card => string.Join(",", card.Select(i => i.ToString()).ToArray()) ).ToArray());
+        var bagState = string.Join(" ", bag.Select(card => string.Join(",", card.Select(i => i.ToString()).ToArray()) ).ToArray());
+        
+        Debug.Log( "count:" + badItemsNum + " shop[" + itemsOrdered +"]:" + shopState + ", bag[" + bagItems + "]:" + bagState);
     }
 }
