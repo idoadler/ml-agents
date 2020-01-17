@@ -8,13 +8,13 @@ using Random = UnityEngine.Random;
 public class SilenceAgent : Agent
 {
     public const int CollectionSize =
-        SilenceAcademy.RiverSize * SilenceAcademy.ResourcesPerCard
-        + SilenceAcademy.FirePitSize * SilenceAcademy.ResourcesPerCard
-        + SilenceAcademy.AgentsNum * GraveyardMemory * SilenceAcademy.ResourcesPerCard
-        + SilenceAcademy.AgentsNum * ActionsMemory * ActionSize
-        + /*id*/ SilenceAcademy.AgentsNum
-        + /*rules*/ /*SilenceManager.AgentsNum * */SilenceAcademy.ResourcesPerAgent; // redundancy - resources are known from id
-//        res += /*count*/ SilenceManager.AgentsNum * SilenceManager.ResourcesPerAgent; // redundancy - known from firepit + rules + id
+        SilenceManager.RiverSize * SilenceManager.ResourcesPerCard
+        + SilenceManager.FirePitSize * SilenceManager.ResourcesPerCard
+        + SilenceManager.AgentsNum * GraveyardMemory * SilenceManager.ResourcesPerCard
+        + SilenceManager.AgentsNum * ActionsMemory * (int)ACTIONS.COUNT
+        + SilenceManager.AgentsNum * ActionsMemory
+        + /*id*/ SilenceManager.AgentsNum
+        + /*rules*/ /*SilenceManager.AgentsNum * */SilenceManager.ResourcesPerAgent * (int)RULES.COUNT; 
 
     public static readonly float[] EmptyAction = new float[ActionSize];
     public const int ActionSize = 2;
@@ -26,7 +26,8 @@ public class SilenceAgent : Agent
         NONE,
         MUST1,
         MUST2,
-        MUSTNOT
+        MUSTNOT,
+        COUNT
     };
 
     public enum ACTIONS
@@ -36,11 +37,13 @@ public class SilenceAgent : Agent
         FIREPIT,
         FLUSH,
         FINISH,
-        EXPOSE
+        EXPOSE,
+        COUNT
     };
 
     [Header("Specific to Silence")] 
     public SilenceAcademy academy;
+    public SilenceManager manager;
     public int id;
     [HideInInspector]
     public Dictionary<int, Sacrifice> sacrifices = new Dictionary<int, Sacrifice>();
@@ -51,7 +54,7 @@ public class SilenceAgent : Agent
 
     private int[] order = {0,1,2,3}; 
     private RULES[] rulesSet = {RULES.NONE,RULES.MUST1,RULES.MUST2,RULES.MUSTNOT}; 
-    private float[] rulesOrder = new float[SilenceAcademy.ResourcesPerAgent];  
+    private RULES[] rulesOrder = new RULES[SilenceManager.ResourcesPerAgent];  
     
     public bool IsFirePitValid()
     {
@@ -60,21 +63,24 @@ public class SilenceAgent : Agent
 
     public override void InitializeAgent()
     {
-        AgentReset();
+        academy = FindObjectOfType<SilenceAcademy>();
     }
 
     public override void CollectObservations()
     {
-        AddVectorObs(academy.river);
-        AddVectorObs(academy.firePit);
-        foreach (var agent in academy.agents)
+        AddVectorObs(manager.river);
+        AddVectorObs(manager.firePit);
+        foreach (var agent in manager.agents)
         {
             AddVectorObs(agent.graveyard);
             AddVectorObs(agent.history);
         }
 
-        AddVectorObs(id, SilenceAcademy.AgentsNum);
-        AddVectorObs(rulesOrder);
+        AddVectorObs(id, SilenceManager.AgentsNum);
+        foreach (var rule in rulesOrder)
+        {
+            AddVectorObs((int)rule, (int)RULES.COUNT);
+        }
         
         SetMask();
     }
@@ -86,7 +92,7 @@ public class SilenceAgent : Agent
     {
         SetActionMask((int) ACTIONS.NONE);
         SetActionMask((int) ACTIONS.EXPOSE);
-        SetActionMask((int) ACTIONS.FIREPIT, academy.GetFirePitMask());
+        SetActionMask((int) ACTIONS.FIREPIT, manager.GetFirePitMask());
     }
     
     public void AddVectorObs(int[][] cards)
@@ -99,7 +105,10 @@ public class SilenceAgent : Agent
     public void AddVectorObs(float[][] actions)
     {
         foreach (var action in actions)
-            AddVectorObs(action);
+        {
+            AddVectorObs(Mathf.RoundToInt(action[0]), (int) ACTIONS.COUNT);
+            AddVectorObs(action[1]);
+        }
     }
     
     public void Win(int chooser)
@@ -123,7 +132,7 @@ public class SilenceAgent : Agent
 
         AddAction(vectorAction);
         
-        academy.DoAction(id, vectorAction);
+        manager.DoAction(id, vectorAction);
     }
     
     public void AddToGraveyard(int[] card)
@@ -143,7 +152,7 @@ public class SilenceAgent : Agent
     public override void AgentReset()
     {
         for (var i = 0; i < graveyard.Length; i++)
-            graveyard[i] = SilenceAcademy.EmptyCard;
+            graveyard[i] = SilenceManager.EmptyCard;
         for (var i = 0; i < history.Length; i++)
             history[i] = EmptyAction;
         sacrifices.Clear();
@@ -155,10 +164,10 @@ public class SilenceAgent : Agent
             order[randomIndex] = temp;
         }
 
-        for (var i = 0; i < SilenceAcademy.ResourcesPerAgent; i++)
+        for (var i = 0; i < SilenceManager.ResourcesPerAgent; i++)
         {
-            sacrifices.Add(id*SilenceAcademy.ResourcesPerAgent + order[i], new Sacrifice(rulesSet[i]));
-            rulesOrder[order[i]] = (float) rulesSet[i];
+            sacrifices.Add(id*SilenceManager.ResourcesPerAgent + order[i], new Sacrifice(rulesSet[i]));
+            rulesOrder[order[i]] = rulesSet[i];
         }
     }
 

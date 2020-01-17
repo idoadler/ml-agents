@@ -175,5 +175,65 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1535007880014989182, guid: a10f097297a1b9e4f95b8a4729edcf19,
+        type: 3}
+      propertyPath: m_BrainParameters.vectorObservationSize
+      value: 92
+      objectReference: {fileID: 0}
+    - target: {fileID: 1535007880014989182, guid: a10f097297a1b9e4f95b8a4729edcf19,
+        type: 3}
+      propertyPath: m_BrainParameters.vectorActionSize.Array.data[0]
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1535007880014989182, guid: a10f097297a1b9e4f95b8a4729edcf19,
+        type: 3}
+      propertyPath: m_BehaviorType
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 220314262264177304, guid: a10f097297a1b9e4f95b8a4729edcf19,
+        type: 3}
+      propertyPath: m_BrainParameters.vectorObservationSize
+      value: 92
+      objectReference: {fileID: 0}
+    - target: {fileID: 220314262264177304, guid: a10f097297a1b9e4f95b8a4729edcf19,
+        type: 3}
+      propertyPath: m_BrainParameters.vectorActionSize.Array.data[0]
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 220314262264177304, guid: a10f097297a1b9e4f95b8a4729edcf19,
+        type: 3}
+      propertyPath: m_BehaviorType
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4663789949076132876, guid: a10f097297a1b9e4f95b8a4729edcf19,
+        type: 3}
+      propertyPath: m_BrainParameters.vectorObservationSize
+      value: 92
+      objectReference: {fileID: 0}
+    - target: {fileID: 4663789949076132876, guid: a10f097297a1b9e4f95b8a4729edcf19,
+        type: 3}
+      propertyPath: m_BrainParameters.vectorActionSize.Array.data[0]
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4663789949076132876, guid: a10f097297a1b9e4f95b8a4729edcf19,
+        type: 3}
+      propertyPath: m_BehaviorType
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 354923830290266164, guid: a10f097297a1b9e4f95b8a4729edcf19,
+        type: 3}
+      propertyPath: m_BrainParameters.vectorObservationSize
+      value: 92
+      objectReference: {fileID: 0}
+    - target: {fileID: 354923830290266164, guid: a10f097297a1b9e4f95b8a4729edcf19,
+        type: 3}
+      propertyPath: m_BrainParameters.vectorActionSize.Array.data[0]
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 354923830290266164, guid: a10f097297a1b9e4f95b8a4729edcf19,
+        type: 3}
+      propertyPath: m_BehaviorType
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a10f097297a1b9e4f95b8a4729edcf19, type: 3}
