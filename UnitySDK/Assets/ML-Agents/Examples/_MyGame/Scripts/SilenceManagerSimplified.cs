@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Assertions;
 using Random = UnityEngine.Random;
 
-public class SilenceManager : MonoBehaviour
+public class SilenceManagerSimplified : MonoBehaviour
 {
     public void SceneReset()
     {
@@ -15,7 +14,7 @@ public class SilenceManager : MonoBehaviour
     
     public void Step()
     {
-        agents[currentAgent].RequestAction();
+        agent.RequestAction();
     }
     
     public static readonly int[] EmptyCard = new int[AgentsNum*ResourcesPerAgent]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -31,14 +30,12 @@ public class SilenceManager : MonoBehaviour
     [HideInInspector]
     public int[][] firePit = new int[FirePitSize][] {EmptyCard,EmptyCard,EmptyCard,EmptyCard,EmptyCard,EmptyCard,EmptyCard};
     
-    public SilenceAgent[] agents = new SilenceAgent[AgentsNum];
-    private int currentAgent = 0;
+    public SilenceAgentSimplified agent;
     private int currentFirePit = 0;
     private int riverSize = 0;
     
     public void ResetAll()
     {
-        currentAgent = 0;
         currentFirePit = 0;
         riverSize = 0;
 
@@ -58,66 +55,49 @@ public class SilenceManager : MonoBehaviour
         return vec;
     }
 
-    public void FinishGame(int id)
+    public void FinishGame()
     {
         PrintState();
-        if (agents.All(agent => agent.IsFirePitValid()))
-            foreach (var agent in agents)
-                agent.Win(id);
+        if (agent.IsFirePitValid())
+            agent.Win();
         else
-            foreach (var agent in agents)
-                agent.Lose(id);
+            agent.Lose();
         SceneReset();
     }
 
-    public void DoAction(int id, float[] vectorAction)
+    public void DoAction(float[] vectorAction)
     {
-        Assert.AreEqual(id, currentAgent);
-        var action = (SilenceAgent.ACTIONS) Mathf.RoundToInt(vectorAction[0]);
+        var action = (SilenceAgentSimplified.ACTIONS) Mathf.RoundToInt(vectorAction[0]);
         var index = Mathf.RoundToInt(vectorAction[1]);
         switch (action)
         {
-            case SilenceAgent.ACTIONS.NONE:
-                throw new NotImplementedException();
-            case SilenceAgent.ACTIONS.RIVER:
-                currentAgent++;
+            case SilenceAgentSimplified.ACTIONS.RIVER:
                 firePit[currentFirePit] = river[index];
                 river[index] = GetRandomCard();
-                foreach (var agent in agents)
-                    agent.AddCard(firePit[currentFirePit]);
+                agent.AddCard(firePit[currentFirePit]);
                 currentFirePit++;
                 if (currentFirePit == FirePitSize)
                 {
-                    FinishGame(id);
+                    FinishGame();
                     return;
                 }
                 break;
-            case SilenceAgent.ACTIONS.FIREPIT:
-                currentAgent++;
-                foreach (var agent in agents)
-                    agent.RemoveCard(firePit[index]);
-                agents[id].AddToGraveyard(firePit[index]);
+            case SilenceAgentSimplified.ACTIONS.FIREPIT:
+                agent.RemoveCard(firePit[index]);
                 for (var i = index; i < currentFirePit; i++)
                     firePit[i] = firePit[i + 1];
                 firePit[currentFirePit] = EmptyCard;
                 currentFirePit--;
                 break;
-            case SilenceAgent.ACTIONS.FLUSH:
-                currentAgent++;
-                for(var i = 0; i < river.Length; i++)
-                    river[i] = GetRandomCard();
-                break;
-            case SilenceAgent.ACTIONS.FINISH:
-                FinishGame(id);
+            case SilenceAgentSimplified.ACTIONS.FINISH:
+                FinishGame();
                 return;
-            case SilenceAgent.ACTIONS.EXPOSE:
-                throw new NotImplementedException();
             default:
                 throw new ArgumentOutOfRangeException();
         }
 
         if (riverSize > MaxRiverSize)
-            FinishGame(id);
+            FinishGame();
     }
 
     private readonly int[][] firePitMasks =
@@ -137,17 +117,12 @@ public class SilenceManager : MonoBehaviour
 
     private void OnDisable()
     {
-        Debug.Log(SilenceAgent.CollectionSize);
+        Debug.Log(SilenceAgentSimplified.CollectionSize);
     }
 
     public void PrintState()
     {
-        var ages = "";
-        foreach (var agent in agents)
-        {
-            ages += agent.PrintState() + " ";
-        }
-
+        var ages = agent.PrintState();
         var lastRiver = string.Join(" ", river.Select(card => string.Join(",", card.Select(i => i.ToString()).ToArray()) ).ToArray());
         var lastFire = string.Join(" ", firePit.Select(card => string.Join(",", card.Select(i => i.ToString()).ToArray()) ).ToArray());
         
